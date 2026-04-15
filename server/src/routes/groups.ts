@@ -8,8 +8,6 @@ import { assertOwnerAccess, getGroupParticipants } from "../services/groupGuard.
 
 export const groupsRouter = Router();
 
-type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
-
 groupsRouter.use(authMiddleware);
 
 groupsRouter.get("/", async (req, res) => {
@@ -77,7 +75,7 @@ groupsRouter.get("/:id", async (req, res) => {
 groupsRouter.post("/", validateBody(createGroupSchema), async (req, res) => {
   const { name } = req.body;
 
-  const group = await prisma.$transaction(async (tx: TxClient) => {
+  const group = await prisma.$transaction(async (tx: any) => {
     const created = await tx.group.create({
       data: {
         name,

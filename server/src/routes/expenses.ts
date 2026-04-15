@@ -9,10 +9,6 @@ import { HttpError } from "../utils/httpError.js";
 
 export const expensesRouter = Router({ mergeParams: true });
 
-type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
-type ExpenseFindManyArgs = Parameters<typeof prisma.expense.findMany>[0];
-type ExpenseWhere = NonNullable<ExpenseFindManyArgs>["where"];
-
 expensesRouter.use(authMiddleware);
 
 async function ensureGroupParticipants(groupId: string, participantIds: string[]): Promise<void> {
@@ -45,9 +41,9 @@ expensesRouter.get("/", validateQuery(expenseFilterSchema), async (req, res) => 
     maxAmountMinor?: number;
   };
 
-  const where: ExpenseWhere = {
+  const where = {
     groupId,
-    description: filters.query ? { contains: filters.query, mode: "insensitive" } : undefined,
+    description: filters.query ? { contains: filters.query, mode: "insensitive" as const } : undefined,
     amountMinor: filters.minAmountMinor || filters.maxAmountMinor ? {
       gte: filters.minAmountMinor,
       lte: filters.maxAmountMinor
@@ -72,7 +68,7 @@ expensesRouter.get("/", validateQuery(expenseFilterSchema), async (req, res) => 
   });
 
   res.json({
-    expenses: expenses.map(serializeExpense),
+    expenses: expenses.map((expense) => serializeExpense(expense as any)),
     metadata: {
       appliedFilters: filters,
       count: expenses.length
@@ -140,7 +136,7 @@ expensesRouter.put("/:expenseId", validateBody(expenseUpdateSchema), async (req,
     percentageShares: payload.percentageShares
   });
 
-  const expense = await prisma.$transaction(async (tx: TxClient) => {
+  const expense = await prisma.$transaction(async (tx: any) => {
     await tx.expenseShare.deleteMany({ where: { expenseId } });
     return tx.expense.update({
       where: { id: expenseId },
