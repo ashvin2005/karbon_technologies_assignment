@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { expenseCreateSchema, expenseFilterSchema, expenseUpdateSchema } from "@splitmint/shared";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { validateBody, validateQuery } from "../middleware/validate.js";
@@ -9,6 +8,10 @@ import { computeExpenseShares } from "../services/splitEngine.js";
 import { HttpError } from "../utils/httpError.js";
 
 export const expensesRouter = Router({ mergeParams: true });
+
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+type ExpenseFindManyArgs = Parameters<typeof prisma.expense.findMany>[0];
+type ExpenseWhere = NonNullable<ExpenseFindManyArgs>["where"];
 
 expensesRouter.use(authMiddleware);
 
@@ -42,7 +45,7 @@ expensesRouter.get("/", validateQuery(expenseFilterSchema), async (req, res) => 
     maxAmountMinor?: number;
   };
 
-  const where: Prisma.ExpenseWhereInput = {
+  const where: ExpenseWhere = {
     groupId,
     description: filters.query ? { contains: filters.query, mode: "insensitive" } : undefined,
     amountMinor: filters.minAmountMinor || filters.maxAmountMinor ? {
@@ -137,7 +140,7 @@ expensesRouter.put("/:expenseId", validateBody(expenseUpdateSchema), async (req,
     percentageShares: payload.percentageShares
   });
 
-  const expense = await prisma.$transaction(async (tx) => {
+  const expense = await prisma.$transaction(async (tx: TxClient) => {
     await tx.expenseShare.deleteMany({ where: { expenseId } });
     return tx.expense.update({
       where: { id: expenseId },

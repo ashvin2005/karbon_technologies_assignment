@@ -86,7 +86,7 @@ aiRouter.post("/group-summary", validateBody(aiGroupSummarySchema), async (req, 
     throw new HttpError(404, "Group not found");
   }
 
-  const participantMap = Object.fromEntries(group.participants.map((participant) => [participant.id, participant.name]));
+  const participantMap = Object.fromEntries(group.participants.map((participant: { id: string; name: string }) => [participant.id, participant.name]));
   const { netByParticipant } = deriveBalances(group.participants, group.expenses);
   const deterministicSettlements = deriveSettlements(netByParticipant);
 
@@ -101,11 +101,18 @@ aiRouter.post("/group-summary", validateBody(aiGroupSummarySchema), async (req, 
     "Group context:",
     JSON.stringify({
       groupName: group.name,
-      participants: group.participants.map((participant) => ({
+      participants: group.participants.map((participant: { id: string; name: string }) => ({
         id: participant.id,
         name: participant.name
       })),
-      recentExpenses: group.expenses.map((expense) => ({
+      recentExpenses: group.expenses.map((expense: {
+        id: string;
+        description: string;
+        amountMinor: number;
+        expenseDate: Date;
+        payerParticipantId: string;
+        shares: unknown;
+      }) => ({
         id: expense.id,
         description: expense.description,
         amountMinor: expense.amountMinor,

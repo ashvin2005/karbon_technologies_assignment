@@ -20,7 +20,7 @@ balancesRouter.get("/balances", async (req, res) => {
     }
   });
 
-  const ownerParticipant = participants.find((p) => p.isOwnerParticipant);
+  const ownerParticipant = participants.find((p: { id: string; isOwnerParticipant: boolean }) => p.isOwnerParticipant);
   const { matrixEntries, netByParticipant } = deriveBalances(participants, expenses);
 
   res.json({

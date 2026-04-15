@@ -8,6 +8,8 @@ import { assertOwnerAccess, getGroupParticipants } from "../services/groupGuard.
 
 export const groupsRouter = Router();
 
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 groupsRouter.use(authMiddleware);
 
 groupsRouter.get("/", async (req, res) => {
@@ -22,12 +24,19 @@ groupsRouter.get("/", async (req, res) => {
   });
 
   res.json({
-    groups: groups.map((group) => ({
+    groups: groups.map((group: {
+      id: string;
+      name: string;
+      ownerUserId: string;
+      participants: Array<{ id: string; isOwnerParticipant: boolean }>;
+      createdAt: Date;
+      updatedAt: Date;
+    }) => ({
       id: group.id,
       name: group.name,
       ownerUserId: group.ownerUserId,
       participantCount: group.participants.length,
-      ownerParticipantId: group.participants.find((p) => p.isOwnerParticipant)?.id,
+      ownerParticipantId: group.participants.find((p: { id: string; isOwnerParticipant: boolean }) => p.isOwnerParticipant)?.id,
       createdAt: group.createdAt,
       updatedAt: group.updatedAt
     }))
@@ -49,7 +58,7 @@ groupsRouter.get("/:id", async (req, res) => {
     throw new HttpError(404, "Group not found");
   }
 
-  const ownerParticipant = group.participants.find((p) => p.isOwnerParticipant);
+  const ownerParticipant = group.participants.find((p: { id: string; isOwnerParticipant: boolean }) => p.isOwnerParticipant);
 
   res.json({
     group: {
@@ -68,7 +77,7 @@ groupsRouter.get("/:id", async (req, res) => {
 groupsRouter.post("/", validateBody(createGroupSchema), async (req, res) => {
   const { name } = req.body;
 
-  const group = await prisma.$transaction(async (tx) => {
+  const group = await prisma.$transaction(async (tx: TxClient) => {
     const created = await tx.group.create({
       data: {
         name,
@@ -89,7 +98,7 @@ groupsRouter.post("/", validateBody(createGroupSchema), async (req, res) => {
   });
 
   const participants = await getGroupParticipants(group.id);
-  const ownerParticipant = participants.find((p) => p.isOwnerParticipant);
+  const ownerParticipant = participants.find((p: { id: string; isOwnerParticipant: boolean }) => p.isOwnerParticipant);
 
   res.status(201).json({
     group: {

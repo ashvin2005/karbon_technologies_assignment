@@ -8,6 +8,8 @@ import { assertOwnerAccess } from "../services/groupGuard.js";
 
 export const participantsRouter = Router({ mergeParams: true });
 
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 participantsRouter.use(authMiddleware);
 
 participantsRouter.get("/", async (req, res) => {
@@ -77,7 +79,7 @@ participantsRouter.delete("/:participantId", async (req, res) => {
   }
 
   // If participant appears in history, remove impacted expenses so balances remain consistent.
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: TxClient) => {
     const impactedExpenses = await tx.expense.findMany({
       where: {
         groupId,
@@ -89,7 +91,7 @@ participantsRouter.delete("/:participantId", async (req, res) => {
       select: { id: true }
     });
 
-    const impactedExpenseIds = impactedExpenses.map((expense) => expense.id);
+    const impactedExpenseIds = impactedExpenses.map((expense: { id: string }) => expense.id);
 
     if (impactedExpenseIds.length > 0) {
       await tx.expenseShare.deleteMany({ where: { expenseId: { in: impactedExpenseIds } } });
