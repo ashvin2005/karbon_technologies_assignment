@@ -68,7 +68,7 @@ expensesRouter.get("/", validateQuery(expenseFilterSchema), async (req, res) => 
   });
 
   res.json({
-    expenses: expenses.map((expense) => serializeExpense(expense as any)),
+    expenses: expenses.map((expense: any) => serializeExpense(expense)),
     metadata: {
       appliedFilters: filters,
       count: expenses.length
