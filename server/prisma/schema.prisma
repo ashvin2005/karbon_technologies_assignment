@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SplitMode {
+  equal
+  custom
+  percentage
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  groups       Group[]
+}
+
+model Group {
+  id           String        @id @default(cuid())
+  ownerUserId  String
+  name         String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  ownerUser    User          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  participants Participant[]
+  expenses     Expense[]
+
+  @@index([ownerUserId])
+}
+
+model Participant {
+  id                 String         @id @default(cuid())
+  groupId            String
+  name               String
+  avatarColor        String
+  isOwnerParticipant Boolean        @default(false)
+  group              Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidExpenses       Expense[]      @relation("payer_expenses")
+  expenseShares      ExpenseShare[]
+
+  @@index([groupId])
+}
+
+model Expense {
+  id                 String         @id @default(cuid())
+  groupId            String
+  payerParticipantId String
+  description        String
+  amountMinor        Int
+  expenseDate        DateTime
+  splitMode          SplitMode
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  group              Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payerParticipant   Participant    @relation("payer_expenses", fields: [payerParticipantId], references: [id], onDelete: Restrict)
+  shares             ExpenseShare[]
+
+  @@index([groupId, expenseDate])
+  @@index([payerParticipantId])
+}
+
+model ExpenseShare {
+  id                    String      @id @default(cuid())
+  expenseId             String
+  participantId         String
+  amountMinor           Int
+  percentageBasisPoints Int?
+  expense               Expense     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  participant           Participant @relation(fields: [participantId], references: [id], onDelete: Restrict)
+
+  @@unique([expenseId, participantId])
+  @@index([participantId])
+}
